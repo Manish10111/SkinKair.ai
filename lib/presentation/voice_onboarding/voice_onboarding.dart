@@ -3,10 +3,10 @@ import 'package:sizer/sizer.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_export.dart';
 import '../../routes/app_routes.dart';
-import '../../theme/app_theme.dart';
+// import '../../theme/app_theme.dart';
 import 'models/consultation_data.dart';
 import 'models/consultation_question_model.dart';
 import 'widgets/answer_option_widget.dart';
@@ -23,6 +23,7 @@ class VoiceOnboarding extends StatefulWidget {
 
 class _VoiceOnboardingState extends State<VoiceOnboarding> {
   // All state variables are declared here at the top
+  final supabase = Supabase.instance.client;
   int _currentQuestionIndex = 0;
   String? _selectedOption;
   bool _isProcessing = false;
@@ -45,8 +46,32 @@ class _VoiceOnboardingState extends State<VoiceOnboarding> {
     super.dispose();
   }
 
+  Future<void> saveUserQuiz(Map<String, String> answers) async {
+    try {
+      print("save quiz in");
+      print("{$answers}");
+      print("{$answers['age_range']}");
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception("No user logged in");
+
+      final response = await supabase.from('user_quiz').insert({
+        'id': userId, // assuming you have a user_id foreign key
+        'age_range': answers['age_range'],
+        'gender': answers['gender'],
+        'skin_type': answers['skin_type'],
+        'allergies': answers['allergies'],
+        'skin_concern': answers['skin_concern'],
+      }).select();
+
+      print("Quiz saved successfully! {$response} rows inserted.");
+    } catch (e) {
+      print("Exception while saving quiz: $e");
+    }
+  }
+
   Future<void> _initializeVoiceServices() async {
     print("Hi");
+
     var status = await Permission.microphone.request();
     print("Microphone permission status: $status");
 
@@ -92,7 +117,7 @@ class _VoiceOnboardingState extends State<VoiceOnboarding> {
     Future.delayed(const Duration(milliseconds: 500), _nextQuestion);
   }
 
-  void _nextQuestion() {
+  void _nextQuestion() async {
     print("ques still");
     if (_currentQuestionIndex < consultationQuestions.length - 1) {
       setState(() {
@@ -104,6 +129,8 @@ class _VoiceOnboardingState extends State<VoiceOnboarding> {
       });
       _speakQuestion(consultationQuestions[_currentQuestionIndex].questionText);
     } else {
+      await saveUserQuiz(_userAnswers);
+      print("User ANswer ---------- {$_userAnswers}");
       print("ques end");
       for (var entry in _userAnswers.entries) {
         print("Question ID: ${entry.key} → Answer: ${entry.value}");

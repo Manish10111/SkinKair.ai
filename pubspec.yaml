@@ -28,7 +28,7 @@ dependencies:
   fl_chart: ^0.65.0
   http: ^1.1.0
   flutter_tts: ^3.8.5
-  speech_to_text: ^7.3.0
+  speech_to_text: ^7.0.0
   permission_handler: ^11.3.1
   google_generative_ai: ^0.4.7
   flutter_secure_storage: ^9.0.0
